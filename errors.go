@@ -3,6 +3,7 @@ package switchbot
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // APIError represents an error response from the SwitchBot API.
@@ -17,13 +18,22 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	msg := fmt.Sprintf("SwitchBot API error: statusCode=%d, message='%s'", e.StatusCode, e.Message)
-	// Avoid printing empty or null body
-	if isEmptyJSONBody(e.Body) {
-		msg += fmt.Sprintf(", body=%s", string(e.Body))
+	var sb strings.Builder // Use strings.Builder for efficient string concatenation
+	sb.WriteString(fmt.Sprintf("SwitchBot API error: statusCode=%d, message='%s'", e.StatusCode, e.Message))
+
+	// Check if the body is non-empty AND not just "{}", "null" etc. before adding it
+	// (Re-using the logic from utils.go/isEmptyJSONBody conceptually)
+	bodyStr := string(e.Body)
+	isBodyEmptyOrNull := isEmptyJSONBody(e.Body)
+
+	if !isBodyEmptyOrNull {
+		sb.WriteString(fmt.Sprintf(", body=%s", bodyStr))
 	}
+
+	// Add the underlying error if it exists
 	if e.Err != nil {
-		msg += fmt.Sprintf(" (caused by: %v)", e.Err)
+		sb.WriteString(fmt.Sprintf(" (caused by: %v)", e.Err))
 	}
-	return msg
+
+	return sb.String()
 }
